@@ -73,6 +73,7 @@ exec /app/llama-server \
   -m "$MODEL_PATH" \
   --host 0.0.0.0 \
   --port "$PORT" \
-  --embedding \
+  --embeddings \
+  --no-webui \
   --api-key "$API_KEY" \
   -c "$CONTEXT_SIZE"
