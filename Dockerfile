@@ -17,7 +17,7 @@ ENV HOST=0.0.0.0 \
     CONTEXT_SIZE=40960
 
 # Persist models via Railway volume
-VOLUME ["/models"]
+# VOLUME ["/models"]
 
 EXPOSE 8080
 
