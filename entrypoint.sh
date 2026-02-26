@@ -69,7 +69,7 @@ else
 fi
 
 echo "🚀 Starting llama-server on port $PORT..."
-exec /llama-server \
+exec /app/llama-server \
   -m "$MODEL_PATH" \
   --host 0.0.0.0 \
   --port "$PORT" \
