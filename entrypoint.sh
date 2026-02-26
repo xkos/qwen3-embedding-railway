@@ -74,6 +74,5 @@ exec /app/llama-server \
   --host 0.0.0.0 \
   --port "$PORT" \
   --embedding \
-  --nobrowser \
   --api-key "$API_KEY" \
   -c "$CONTEXT_SIZE"
