@@ -1,5 +1,6 @@
 #!/bin/bash
-set -euo pipefail
+set -e
+
 
 API_KEY="${API_KEY:-}"
 if [ -z "$API_KEY" ]; then
@@ -7,10 +8,12 @@ if [ -z "$API_KEY" ]; then
   exit 1
 fi
 
-curl -sS http://localhost:8080/v1/embeddings \
+# curl -vvv  https://qwen3-embedding-railway-production.up.railway.app/v1/models -H "Content-Type: application/json"  -H "Authorization: Bearer ${API_KEY}" 
+
+curl -vvv -sS https://qwen3-embedding-railway-production.up.railway.app/v1/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${API_KEY}" \
   -d '{
     "input": "The food was delicious and the waiter...",
-    "model": "qwen3-embedding"
+    "model": "Qwen3-Embedding-4B-Q4_K_M"
   }' | jq .

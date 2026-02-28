@@ -71,7 +71,7 @@ fi
 echo "🚀 Starting llama-server on port $PORT..."
 exec /app/llama-server \
   -m "$MODEL_PATH" \
-  --host 0.0.0.0 \
+  --host "::" \
   --port "$PORT" \
   --embeddings \
   --no-webui \
