@@ -3,34 +3,44 @@ set -euo pipefail
 
 # Config (env with defaults)
 MODEL_DIR="/models"
-PORT="${PORT:-}"
+PORT="${PORT:-8080}"
+OLLAMA_PORT="11434"
 PLATFORM="${PLATFORM:-hf}"           # hf | modelscope
 MODEL_NAME="${MODEL_NAME:-}"
 MODEL_FILENAME="${MODEL_FILENAME:-}"
-CONTEXT_SIZE="${CONTEXT_SIZE:-}"
-API_KEY="${API_KEY:-}"
 MODEL_PATH="$MODEL_DIR/$MODEL_FILENAME"
+CONTEXT_SIZE="${CONTEXT_SIZE:-10240}"
+BATCH_SIZE="${BATCH_SIZE:-512}"
+API_KEY="${API_KEY:-}"
 
-# Require API_KEY and core envs
-if [ -z "$API_KEY" ]; then
-  echo "❌ Error: API_KEY is required. Please set the API_KEY environment variable."
-  exit 1
-fi
-
-for v in PORT MODEL_NAME MODEL_FILENAME CONTEXT_SIZE; do
+# 1. Check required environment variables
+for v in MODEL_NAME MODEL_FILENAME API_KEY; do
   if [ -z "$(eval echo \"\${$v}\")" ]; then
     echo "❌ Error: $v is required but not set. Please set it via Dockerfile or Railway env vars."
     exit 1
   fi
 done
 
-# Ensure model dir
+# 2. Create model directory
 if [ ! -d "$MODEL_DIR" ]; then
   echo "Creating directory $MODEL_DIR..."
   mkdir -p "$MODEL_DIR"
 fi
 
-# Build MODEL_URL if file missing
+# 3. Start Ollama in background
+echo "🚀 Starting Ollama service (internal port $OLLAMA_PORT)..."
+export OLLAMA_HOST="127.0.0.1:$OLLAMA_PORT"
+/bin/ollama serve &
+OLLAMA_PID=$!
+
+# 4. Wait for Ollama to be ready
+echo "⏳ Waiting for Ollama service to be ready..."
+until curl -s http://127.0.0.1:$OLLAMA_PORT >/dev/null; do
+  sleep 1
+done
+echo "✅ Ollama service is up."
+
+# 5. Download model if missing (Logic reused)
 if [ -f "$MODEL_PATH" ]; then
   echo "✅ Model found at $MODEL_PATH, skipping download."
 else
@@ -49,6 +59,7 @@ else
         ;;
       *)
         echo "❌ Unsupported PLATFORM: $PLATFORM (supported: hf, modelscope)"
+        kill "$OLLAMA_PID"
         exit 1
         ;;
     esac
@@ -64,16 +75,56 @@ else
     echo "✅ Download complete. Saved to $MODEL_PATH"
   else
     echo "❌ Download failed."
+    kill "$OLLAMA_PID"
     exit 1
   fi
 fi
 
-echo "🚀 Starting llama-server on port $PORT..."
-exec /app/llama-server \
-  -m "$MODEL_PATH" \
-  --host "::" \
-  --port "$PORT" \
-  --embeddings \
-  --no-webui \
-  --api-key "$API_KEY" \
-  -c "$CONTEXT_SIZE"
+# 6. Create Modelfile and Import Model into Ollama
+echo "📝 Creating Modelfile for $MODEL_FILENAME..."
+cat <<EOF > Modelfile
+FROM $MODEL_PATH
+PARAMETER num_ctx $CONTEXT_SIZE
+PARAMETER num_batch $BATCH_SIZE
+EOF
+
+# Use MODEL_NAME (or slug) as the Ollama model name
+OLLAMA_MODEL_NAME=$(echo "$MODEL_NAME" | cut -d'/' -f2 | tr '[:upper:]' '[:lower:]')
+echo "📦 Importing model as '$OLLAMA_MODEL_NAME'..."
+
+# Create model (this will load GGUF and register it in Ollama)
+/bin/ollama create "$OLLAMA_MODEL_NAME" -f Modelfile
+
+# Verify model loaded
+if /bin/ollama list | grep -q "$OLLAMA_MODEL_NAME"; then
+  echo "✅ Model '$OLLAMA_MODEL_NAME' created successfully!"
+else
+  echo "❌ Failed to create model."
+  kill "$OLLAMA_PID"
+  exit 1
+fi
+
+# 7. Configure Caddy for API Key Authentication
+echo "🔒 Configuring Caddy Proxy on port $PORT..."
+cat <<EOF > /app/Caddyfile
+{
+    admin off
+}
+:$PORT {
+    @unauthorized {
+        not header Authorization "Bearer $API_KEY"
+    }
+    respond @unauthorized 401
+    reverse_proxy 127.0.0.1:$OLLAMA_PORT
+}
+EOF
+
+# 8. Start Caddy in foreground (keeping container alive)
+# Note: Ollama runs in background, Caddy runs in foreground.
+# If Ollama crashes, we might want to exit too, but Caddy will just 502.
+# For simplicity, we just run Caddy.
+echo "🚀 Starting Caddy Proxy..."
+caddy run --config /app/Caddyfile --adapter caddyfile
+
+# Cleanup if Caddy exits
+kill "$OLLAMA_PID"
