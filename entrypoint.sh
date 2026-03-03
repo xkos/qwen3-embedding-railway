@@ -121,6 +121,7 @@ cat <<EOF > /app/Caddyfile
     }
     respond @unauthorized 401
     reverse_proxy 127.0.0.1:$OLLAMA_PORT {
+        header_up Host localhost
         header_up -Authorization
     }
 }
