@@ -14,7 +14,7 @@ PORT = "8080"
 PLATFORM = "hf"
 MODEL_NAME = "Qwen/Qwen3-Embedding-4B-GGUF"
 MODEL_FILENAME = "Qwen3-Embedding-4B-Q4_K_M.gguf"
-CONTEXT_SIZE = "40960"
+CONTEXT_SIZE = "10240"
 # API_KEY must be set in Railway Dashboard (no default here)
 
 # Persist models in Railway volume

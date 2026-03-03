@@ -14,7 +14,7 @@ ENV HOST=0.0.0.0 \
     PLATFORM=hf \
     MODEL_NAME=Qwen/Qwen3-Embedding-4B-GGUF \
     MODEL_FILENAME=Qwen3-Embedding-4B-Q4_K_M.gguf \
-    CONTEXT_SIZE=40960
+    CONTEXT_SIZE=10240
 
 # Persist models via Railway volume
 # VOLUME ["/models"]
