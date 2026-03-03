@@ -30,7 +30,9 @@ fi
 # 3. Start Ollama in background
 echo "🚀 Starting Ollama service (internal port $OLLAMA_PORT)..."
 export OLLAMA_HOST="127.0.0.1:$OLLAMA_PORT"
-/bin/ollama serve &
+export OLLAMA_ORIGINS="*"
+# Redirect stdout to /dev/null to reduce logs (access logs), keep stderr for errors
+/bin/ollama serve > /dev/null &
 OLLAMA_PID=$!
 
 # 4. Wait for Ollama to be ready
@@ -109,6 +111,9 @@ echo "🔒 Configuring Caddy Proxy on port $PORT..."
 cat <<EOF > /app/Caddyfile
 {
     admin off
+    log {
+        level ERROR
+    }
 }
 :$PORT {
     @unauthorized {
