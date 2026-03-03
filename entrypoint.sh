@@ -120,7 +120,9 @@ cat <<EOF > /app/Caddyfile
         not header Authorization "Bearer $API_KEY"
     }
     respond @unauthorized 401
-    reverse_proxy 127.0.0.1:$OLLAMA_PORT
+    reverse_proxy 127.0.0.1:$OLLAMA_PORT {
+        header_up -Authorization
+    }
 }
 EOF
 
