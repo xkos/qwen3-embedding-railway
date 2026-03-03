@@ -91,7 +91,7 @@ PARAMETER num_batch $BATCH_SIZE
 EOF
 
 # Use MODEL_NAME (or slug) as the Ollama model name
-OLLAMA_MODEL_NAME=$(echo "$MODEL_NAME" | cut -d'/' -f2 | tr '[:upper:]' '[:lower:]')
+OLLAMA_MODEL_NAME=$(echo "$MODEL_NAME" | cut -d'/' -f2)
 echo "📦 Importing model as '$OLLAMA_MODEL_NAME'..."
 
 # Create model (this will load GGUF and register it in Ollama)
